@@ -104,6 +104,42 @@ async function fetchMarketMovers() {
   return { active, gainers, losers };
 }
 
+// ==================== UNIVERSAL TICKER DATA FETCHERS ====================
+
+// Wave 1: Core data (3 API calls, shown immediately when modal opens)
+async function fetchTickerWave1(ticker) {
+  const [quote, profile, history] = await Promise.all([
+    fmpFetch(`/quote/${ticker}`, `quote_${ticker}`, CACHE_DURATION),
+    fmpFetch(`/profile/${ticker}`, `profile_${ticker}`, DAILY_CACHE),
+    fmpFetch(`/historical-price-full/${ticker}?timeseries=90`, `hist_${ticker}`, DAILY_CACHE)
+  ]);
+  return {
+    quote: Array.isArray(quote) ? quote[0] : quote,
+    profile: Array.isArray(profile) ? profile[0] : profile,
+    liveHistory: history?.historical || null
+  };
+}
+
+// Wave 2: Secondary data (4 API calls, lazy loaded after Wave 1 renders)
+async function fetchTickerWave2(ticker) {
+  const [news, estimates, ratios, earnings] = await Promise.all([
+    fmpFetch(`/stock_news?tickers=${ticker}&limit=10`, `news_${ticker}`, CACHE_DURATION),
+    fmpFetch(`/analyst-estimates/${ticker}`, `estimates_${ticker}`, DAILY_CACHE),
+    fmpFetch(`/ratios-ttm/${ticker}`, `ratios_${ticker}`, DAILY_CACHE),
+    fmpFetch(`/earnings-surprises/${ticker}`, `earnings_${ticker}`, DAILY_CACHE)
+  ]);
+  return { news, analystEstimates: estimates, ratios, earnings };
+}
+
+// Wave 3: On-demand data (only when user clicks Insider & Institutional tab)
+async function fetchInsiderData(ticker) {
+  return fmpFetch(`/insider-trading?symbol=${ticker}&page=0`, `insider_${ticker}`, DAILY_CACHE);
+}
+
+async function fetchInstitutionalHolders(ticker) {
+  return fmpFetch(`/institutional-holder/${ticker}`, `institutions_${ticker}`, DAILY_CACHE);
+}
+
 // ==================== UPDATE DASHBOARD WITH LIVE DATA ====================
 
 async function updateShortedStocksWithLiveData() {

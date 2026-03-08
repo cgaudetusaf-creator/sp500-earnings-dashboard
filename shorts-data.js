@@ -615,3 +615,137 @@ const SHORTED_STOCKS = [
 
 // Sort by current SI descending
 SHORTED_STOCKS.sort((a, b) => b.siCurrent - a.siCurrent);
+
+// ==================== OPTIONS WRITING DATA ====================
+// Attach options-writing intelligence to each shorted stock
+function computeAnnualizedYield(premium, price, dte) {
+  return +((premium / price) * (365 / dte) * 100).toFixed(1);
+}
+
+SHORTED_STOCKS.forEach(s => {
+  const dte = 30 + Math.floor(Math.random() * 20); // 30-50 DTE (nearest monthly)
+  const iv30d = +(0.25 + (s.ivRank / 100) * 0.55 + (Math.random() - 0.5) * 0.08).toFixed(3);
+  const ivHist = +(iv30d * (0.65 + Math.random() * 0.25)).toFixed(3);
+  const ivChange5d = +((iv30d - ivHist) / ivHist * 100 * (0.3 + Math.random() * 0.7) * (Math.random() > 0.3 ? 1 : -1)).toFixed(1);
+  const atmCallPremium = +(s.price * iv30d * Math.sqrt(dte / 365) * 0.4).toFixed(2);
+  const atmPutPremium = +(atmCallPremium * (0.85 + Math.random() * 0.3)).toFixed(2);
+  const earningsDate = `2026-0${4 + Math.floor(Math.random() * 3)}-${10 + Math.floor(Math.random() * 18)}`;
+  const earningsInWindow = dte > 25 && Math.random() > 0.6;
+  const callYieldAnn = computeAnnualizedYield(atmCallPremium, s.price, dte);
+  const putYieldAnn = computeAnnualizedYield(atmPutPremium, s.price, dte);
+
+  let ccSignal = "sell";
+  if (s.ivRank < 30 || callYieldAnn < 8) ccSignal = "hold";
+  if (earningsInWindow || s.overallSignal === "bullish") ccSignal = s.ivRank > 55 ? "sell" : "hold";
+  if (s.rsi > 75) ccSignal = "sell"; // Overbought = good for selling calls
+  if (s.ivRank < 20) ccSignal = "avoid";
+
+  let cspSignal = "sell";
+  if (s.ivRank < 30 || putYieldAnn < 8) cspSignal = "hold";
+  if (s.overallSignal === "bearish" && s.rsi < 25) cspSignal = "avoid"; // Falling knife
+  if (earningsInWindow) cspSignal = s.ivRank > 65 ? "sell" : "hold";
+  if (s.ivRank < 20) cspSignal = "avoid";
+
+  s.optionsWriting = {
+    ivRank: s.ivRank,
+    iv30d, ivHist, ivChange5d,
+    atmCallPremium, atmPutPremium,
+    callDelta: +(0.45 + Math.random() * 0.10).toFixed(2),
+    putDelta: -(0.45 + Math.random() * 0.10).toFixed(2),
+    dte, earningsInWindow, earningsDate,
+    callYieldAnn, putYieldAnn,
+    ccSignal, cspSignal,
+    marginOfSafety: +((1 - s.support1 / s.price) * 100).toFixed(1),
+    pe: +(8 + Math.random() * 40).toFixed(1)
+  };
+});
+
+// Additional high-IV options candidates from broader S&P 500 (not in SHORTED_STOCKS)
+const OPTIONS_CANDIDATES = [
+  {
+    ticker: "SMCI", name: "Super Micro Computer", sector: "Information Technology",
+    price: 42.50, rsi: 28.5, support1: 38.00,
+    optionsWriting: { ivRank: 92, iv30d: 0.95, ivHist: 0.58, ivChange5d: 32.1, atmCallPremium: 6.80, atmPutPremium: 6.45, callDelta: 0.50, putDelta: -0.50, dte: 38, earningsInWindow: false, earningsDate: "2026-05-06", callYieldAnn: 153.4, putYieldAnn: 145.5, ccSignal: "sell", cspSignal: "sell", marginOfSafety: 10.6, pe: 12.3 }
+  },
+  {
+    ticker: "MARA", name: "Marathon Digital", sector: "Information Technology",
+    price: 18.75, rsi: 45.2, support1: 15.00,
+    optionsWriting: { ivRank: 88, iv30d: 1.05, ivHist: 0.72, ivChange5d: 24.5, atmCallPremium: 3.35, atmPutPremium: 3.10, callDelta: 0.48, putDelta: -0.48, dte: 32, earningsInWindow: false, earningsDate: "2026-05-08", callYieldAnn: 202.1, putYieldAnn: 187.0, ccSignal: "sell", cspSignal: "sell", marginOfSafety: 20.0, pe: 25.8 }
+  },
+  {
+    ticker: "RIVN", name: "Rivian Automotive", sector: "Consumer Discretionary",
+    price: 13.20, rsi: 38.4, support1: 11.00,
+    optionsWriting: { ivRank: 85, iv30d: 0.82, ivHist: 0.55, ivChange5d: 18.5, atmCallPremium: 1.85, atmPutPremium: 1.72, callDelta: 0.49, putDelta: -0.49, dte: 38, earningsInWindow: false, earningsDate: "2026-05-07", callYieldAnn: 133.5, putYieldAnn: 124.1, ccSignal: "sell", cspSignal: "hold", marginOfSafety: 16.7, pe: -1 }
+  },
+  {
+    ticker: "COIN", name: "Coinbase Global", sector: "Financials",
+    price: 205.30, rsi: 55.8, support1: 180.00,
+    optionsWriting: { ivRank: 82, iv30d: 0.75, ivHist: 0.52, ivChange5d: 15.2, atmCallPremium: 26.50, atmPutPremium: 24.80, callDelta: 0.51, putDelta: -0.49, dte: 32, earningsInWindow: false, earningsDate: "2026-05-08", callYieldAnn: 147.3, putYieldAnn: 137.8, ccSignal: "sell", cspSignal: "sell", marginOfSafety: 12.3, pe: 28.5 }
+  },
+  {
+    ticker: "SHOP", name: "Shopify Inc.", sector: "Information Technology",
+    price: 98.50, rsi: 62.1, support1: 88.00,
+    optionsWriting: { ivRank: 76, iv30d: 0.58, ivHist: 0.40, ivChange5d: 22.8, atmCallPremium: 9.80, atmPutPremium: 9.20, callDelta: 0.50, putDelta: -0.50, dte: 38, earningsInWindow: true, earningsDate: "2026-04-28", callYieldAnn: 95.0, putYieldAnn: 89.2, ccSignal: "hold", cspSignal: "hold", marginOfSafety: 10.7, pe: 72.4 }
+  },
+  {
+    ticker: "PLTR", name: "Palantir Technologies", sector: "Information Technology",
+    price: 78.20, rsi: 68.5, support1: 68.00,
+    optionsWriting: { ivRank: 74, iv30d: 0.65, ivHist: 0.48, ivChange5d: 12.8, atmCallPremium: 8.65, atmPutPremium: 8.10, callDelta: 0.51, putDelta: -0.49, dte: 32, earningsInWindow: false, earningsDate: "2026-05-05", callYieldAnn: 126.2, putYieldAnn: 118.2, ccSignal: "sell", cspSignal: "sell", marginOfSafety: 13.0, pe: 145.2 }
+  },
+  {
+    ticker: "HOOD", name: "Robinhood Markets", sector: "Financials",
+    price: 42.80, rsi: 52.3, support1: 36.50,
+    optionsWriting: { ivRank: 71, iv30d: 0.68, ivHist: 0.50, ivChange5d: 28.5, atmCallPremium: 4.95, atmPutPremium: 4.60, callDelta: 0.49, putDelta: -0.49, dte: 38, earningsInWindow: false, earningsDate: "2026-05-06", callYieldAnn: 110.2, putYieldAnn: 102.5, ccSignal: "sell", cspSignal: "sell", marginOfSafety: 14.7, pe: 32.1 }
+  },
+  {
+    ticker: "CRWD", name: "CrowdStrike Holdings", sector: "Information Technology",
+    price: 345.60, rsi: 58.2, support1: 310.00,
+    optionsWriting: { ivRank: 68, iv30d: 0.48, ivHist: 0.35, ivChange5d: 8.5, atmCallPremium: 28.40, atmPutPremium: 26.80, callDelta: 0.50, putDelta: -0.50, dte: 32, earningsInWindow: false, earningsDate: "2026-06-03", callYieldAnn: 93.7, putYieldAnn: 88.5, ccSignal: "sell", cspSignal: "sell", marginOfSafety: 10.3, pe: 85.3 }
+  },
+  {
+    ticker: "SQ", name: "Block Inc.", sector: "Financials",
+    price: 72.40, rsi: 44.8, support1: 62.00,
+    optionsWriting: { ivRank: 66, iv30d: 0.58, ivHist: 0.42, ivChange5d: 11.2, atmCallPremium: 7.15, atmPutPremium: 6.70, callDelta: 0.50, putDelta: -0.50, dte: 38, earningsInWindow: false, earningsDate: "2026-05-01", callYieldAnn: 94.2, putYieldAnn: 88.3, ccSignal: "sell", cspSignal: "sell", marginOfSafety: 14.4, pe: 38.7 }
+  },
+  {
+    ticker: "SNOW", name: "Snowflake Inc.", sector: "Information Technology",
+    price: 168.90, rsi: 50.1, support1: 148.00,
+    optionsWriting: { ivRank: 65, iv30d: 0.52, ivHist: 0.38, ivChange5d: 9.8, atmCallPremium: 14.95, atmPutPremium: 14.10, callDelta: 0.50, putDelta: -0.50, dte: 32, earningsInWindow: false, earningsDate: "2026-05-28", callYieldAnn: 100.9, putYieldAnn: 95.2, ccSignal: "sell", cspSignal: "sell", marginOfSafety: 12.4, pe: -1 }
+  },
+  {
+    ticker: "ROKU", name: "Roku Inc.", sector: "Communication Services",
+    price: 85.60, rsi: 40.2, support1: 72.00,
+    optionsWriting: { ivRank: 72, iv30d: 0.62, ivHist: 0.44, ivChange5d: 25.2, atmCallPremium: 9.05, atmPutPremium: 8.50, callDelta: 0.50, putDelta: -0.50, dte: 38, earningsInWindow: false, earningsDate: "2026-04-24", callYieldAnn: 100.8, putYieldAnn: 94.7, ccSignal: "sell", cspSignal: "sell", marginOfSafety: 15.9, pe: -1 }
+  },
+  {
+    ticker: "UPST", name: "Upstart Holdings", sector: "Financials",
+    price: 62.30, rsi: 55.8, support1: 52.00,
+    optionsWriting: { ivRank: 80, iv30d: 0.82, ivHist: 0.58, ivChange5d: 18.8, atmCallPremium: 8.70, atmPutPremium: 8.15, callDelta: 0.49, putDelta: -0.49, dte: 32, earningsInWindow: false, earningsDate: "2026-05-06", callYieldAnn: 159.3, putYieldAnn: 149.2, ccSignal: "sell", cspSignal: "sell", marginOfSafety: 16.5, pe: 95.2 }
+  },
+  {
+    ticker: "AFRM", name: "Affirm Holdings", sector: "Financials",
+    price: 52.40, rsi: 48.5, support1: 44.00,
+    optionsWriting: { ivRank: 75, iv30d: 0.72, ivHist: 0.52, ivChange5d: 14.2, atmCallPremium: 6.42, atmPutPremium: 6.00, callDelta: 0.50, putDelta: -0.50, dte: 38, earningsInWindow: false, earningsDate: "2026-05-08", callYieldAnn: 116.8, putYieldAnn: 109.2, ccSignal: "sell", cspSignal: "sell", marginOfSafety: 16.0, pe: -1 }
+  },
+  {
+    ticker: "NET", name: "Cloudflare Inc.", sector: "Information Technology",
+    price: 112.80, rsi: 56.3, support1: 98.00,
+    optionsWriting: { ivRank: 62, iv30d: 0.50, ivHist: 0.38, ivChange5d: 7.5, atmCallPremium: 9.60, atmPutPremium: 9.00, callDelta: 0.50, putDelta: -0.50, dte: 32, earningsInWindow: false, earningsDate: "2026-05-01", callYieldAnn: 97.1, putYieldAnn: 91.0, ccSignal: "sell", cspSignal: "sell", marginOfSafety: 13.1, pe: 250.5 }
+  },
+  {
+    ticker: "DKNG", name: "DraftKings Inc.", sector: "Consumer Discretionary",
+    price: 38.50, rsi: 42.8, support1: 32.00,
+    optionsWriting: { ivRank: 70, iv30d: 0.62, ivHist: 0.45, ivChange5d: 21.5, atmCallPremium: 4.08, atmPutPremium: 3.80, callDelta: 0.49, putDelta: -0.49, dte: 38, earningsInWindow: false, earningsDate: "2026-05-02", callYieldAnn: 101.1, putYieldAnn: 94.1, ccSignal: "sell", cspSignal: "sell", marginOfSafety: 16.9, pe: 65.8 }
+  }
+];
+
+// Combine all options writing candidates (shorted + additional), deduplicating by ticker
+function getAllOptionsWritingCandidates() {
+  const fromShorted = SHORTED_STOCKS.filter(s => s.optionsWriting).map(s => ({
+    ticker: s.ticker, name: s.name, sector: s.sector, price: s.price,
+    rsi: s.rsi, support1: s.support1, optionsWriting: s.optionsWriting
+  }));
+  const seen = new Set(fromShorted.map(s => s.ticker));
+  const extras = OPTIONS_CANDIDATES.filter(c => !seen.has(c.ticker));
+  return [...fromShorted, ...extras].sort((a, b) => b.optionsWriting.ivRank - a.optionsWriting.ivRank);
+}

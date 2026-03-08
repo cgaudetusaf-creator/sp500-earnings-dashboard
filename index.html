@@ -81,38 +81,57 @@
   </div>
 </section>
 
-<!-- Stock Detail Modal -->
+<!-- Universal Ticker Deep-Dive Modal -->
 <div class="stock-modal-overlay" id="stockModalOverlay">
   <div class="stock-modal" id="stockModal">
-    <button class="modal-close" onclick="closeStockModal()">&times;</button>
-    <div class="modal-header" id="modalHeader"></div>
-    <div class="modal-grid">
-      <div class="modal-col">
-        <h3>Short Interest — 90 Day History</h3>
-        <div class="modal-chart-wrap"><canvas id="siHistoryChart"></canvas></div>
-        <h3>Price Action & Moving Averages</h3>
-        <div class="modal-chart-wrap"><canvas id="priceChart"></canvas></div>
-      </div>
-      <div class="modal-col">
-        <h3>Options Flow — Calls vs Puts (90d)</h3>
-        <div class="modal-chart-wrap"><canvas id="optionsChart"></canvas></div>
-        <h3>Technical Indicators</h3>
-        <div class="tech-indicators" id="techIndicators"></div>
-      </div>
-    </div>
-    <div class="modal-full-row">
-      <div class="modal-half">
-        <h3>Short Interest vs Headlines</h3>
-        <div class="headlines-list" id="headlinesList"></div>
-      </div>
-      <div class="modal-half">
-        <h3>Overall Technical Picture</h3>
-        <div class="tech-summary" id="techSummary"></div>
-        <div class="key-levels" id="keyLevels"></div>
-      </div>
-    </div>
+    <!-- Content generated dynamically by openTickerModal() -->
   </div>
 </div>
+
+<!-- Options Writing Intelligence -->
+<section class="options-writing-section">
+  <h2>Options Writing Intelligence — Premium Selling Opportunities</h2>
+  <p class="section-desc">Identify the best candidates for selling calls and puts based on elevated IV, premium spikes, and favorable risk/reward. Click any ticker for a full deep-dive.</p>
+
+  <div class="ow-kpi-row" id="owKpiRow"></div>
+
+  <div class="ow-subsection">
+    <h3>Premium Spike Alerts <span style="font-size:0.75rem;color:var(--text2);font-weight:400">— IV surged >20% in 5 days</span></h3>
+    <div class="spike-alerts" id="spikeAlerts"></div>
+  </div>
+
+  <div class="ow-subsection">
+    <h3>Covered Call Candidates <span class="strategy-badge calls">Sell Calls</span></h3>
+    <div class="ow-table-wrapper">
+      <table class="ow-table" id="ccTable">
+        <thead>
+          <tr>
+            <th>Ticker</th><th>Company</th><th>Price</th><th>IV Rank</th>
+            <th>30d IV</th><th>ATM Premium</th><th>Ann. Yield</th>
+            <th>Delta</th><th>DTE</th><th>Earnings</th><th>Signal</th>
+          </tr>
+        </thead>
+        <tbody id="ccTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="ow-subsection">
+    <h3>Cash-Secured Put Candidates <span class="strategy-badge puts">Sell Puts</span></h3>
+    <div class="ow-table-wrapper">
+      <table class="ow-table" id="cspTable">
+        <thead>
+          <tr>
+            <th>Ticker</th><th>Company</th><th>Price</th><th>IV Rank</th>
+            <th>ATM Premium</th><th>Ann. Yield</th><th>Margin of Safety</th>
+            <th>Support</th><th>RSI</th><th>P/E</th><th>Signal</th>
+          </tr>
+        </thead>
+        <tbody id="cspTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
 <!-- Sector Breakdown -->
 <section class="sector-breakdown">
